@@ -1,0 +1,250 @@
+<div class="h-screen flex overflow-hidden bg-slate-100 dark:bg-coal-950 text-slate-900 dark:text-mist-100">
+
+  <!-- ░░ Column 1 — channels ░░ -->
+  <aside data-tour="channels"
+    class="w-64 shrink-0 flex-col bg-white dark:bg-coal-950 border-r border-slate-200 dark:border-coal-700
+           fixed inset-y-0 left-0 z-40 flex transition-transform lg:static lg:translate-x-0"
+    [class.-translate-x-full]="!mobileNavOpen()">
+    <div class="px-4 h-14 flex items-center justify-between border-b border-slate-200 dark:border-coal-700">
+      <span class="font-bold truncate">{{ server()?.name ?? 'ChatSphere' }}</span>
+      <button class="lg:hidden w-8 h-8 grid place-items-center rounded-lg hover:bg-slate-100 dark:hover:bg-coal-800" (click)="mobileNavOpen.set(false)">
+        <lucide-icon name="x" class="w-4 h-4"></lucide-icon>
+      </button>
+    </div>
+
+    <nav class="flex-1 overflow-y-auto p-2 space-y-4">
+      <div>
+        <p class="px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-mist-400">{{ 'chat.channels' | t }}</p>
+        @for (c of channels(); track c.id) {
+          <button (click)="openChannel(c)"
+            class="w-full flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm transition-colors"
+            [class]="current()?.id === c.id ? 'bg-volt-500/15 text-slate-900 dark:text-white' : 'text-slate-600 dark:text-mist-300 hover:bg-slate-100 dark:hover:bg-coal-800'">
+            <span class="font-mono" [class.text-volt-500]="current()?.id === c.id">#</span>
+            <span class="flex-1 truncate text-left" [class.font-bold]="c.unread > 0">{{ c.name }}</span>
+            @if (c.hasMention) {
+              <span class="min-w-[18px] h-[18px] rounded-full bg-volt-500 text-white text-[10px] font-bold grid place-items-center px-1">@</span>
+            } @else if (c.unread > 0) {
+              <span class="min-w-[18px] h-[18px] rounded-full bg-slate-300 dark:bg-coal-500 text-slate-700 dark:text-mist-100 text-[10px] font-bold grid place-items-center px-1 num">{{ c.unread }}</span>
+            }
+          </button>
+        }
+      </div>
+
+      <div>
+        <p class="px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-mist-400">{{ 'chat.directMessages' | t }}</p>
+        @for (d of dms(); track d.channelId) {
+          <button (click)="openDm(d)"
+            class="w-full flex items-center gap-2.5 rounded-lg px-3 py-1.5 text-sm transition-colors"
+            [class]="current()?.id === d.channelId ? 'bg-volt-500/15 text-slate-900 dark:text-white' : 'text-slate-600 dark:text-mist-300 hover:bg-slate-100 dark:hover:bg-coal-800'">
+            <cs-avatar [name]="d.other.displayName" [color]="d.other.avatarColor" size="sm" [presence]="presenceOf(d.other.id)"></cs-avatar>
+            <span class="flex-1 truncate text-left" [class.font-bold]="d.unread > 0">{{ d.other.displayName }}</span>
+            @if (d.unread > 0) {
+              <span class="min-w-[18px] h-[18px] rounded-full bg-volt-500 text-white text-[10px] font-bold grid place-items-center px-1 num">{{ d.unread }}</span>
+            }
+          </button>
+        } @empty {
+          <p class="px-3 text-xs text-slate-400 dark:text-mist-400">—</p>
+        }
+      </div>
+    </nav>
+
+    <div class="p-3 border-t border-slate-200 dark:border-coal-700 flex items-center gap-2.5">
+      <cs-avatar [name]="me()?.displayName ?? ''" [color]="me()?.avatarColor ?? '#7C6CF0'" size="md" presence="online"></cs-avatar>
+      <div class="flex-1 min-w-0">
+        <p class="text-sm font-semibold truncate">{{ me()?.displayName }}</p>
+        <p class="text-[11px] text-online">{{ 'chat.online' | t }}</p>
+      </div>
+      <button [cdkMenuTriggerFor]="userMenu" class="w-8 h-8 grid place-items-center rounded-lg text-slate-400 dark:text-mist-400 hover:bg-slate-100 dark:hover:bg-coal-800 transition-colors">
+        <lucide-icon name="settings" class="w-4 h-4"></lucide-icon>
+      </button>
+    </div>
+  </aside>
+
+  @if (mobileNavOpen()) {
+    <div class="fixed inset-0 z-30 bg-coal-950/50 lg:hidden" (click)="mobileNavOpen.set(false)"></div>
+  }
+
+  <!-- ░░ Column 2 — messages ░░ -->
+  <section class="flex-1 flex flex-col min-w-0 bg-slate-50 dark:bg-coal-900">
+    <header class="h-14 shrink-0 px-4 flex items-center gap-3 border-b border-slate-200 dark:border-coal-700 bg-white dark:bg-coal-900">
+      <button class="lg:hidden w-8 h-8 grid place-items-center rounded-lg hover:bg-slate-100 dark:hover:bg-coal-800" (click)="mobileNavOpen.set(true)">
+        <lucide-icon name="message-circle" class="w-4 h-4"></lucide-icon>
+      </button>
+      @if (current(); as c) {
+        <span class="text-slate-400 dark:text-mist-300 font-mono">{{ c.isDirect ? '@' : '#' }}</span>
+        <div class="min-w-0">
+          <p class="font-bold text-sm truncate">{{ c.title }}</p>
+          @if (c.topic) { <p class="text-[11px] text-slate-400 dark:text-mist-400 truncate">{{ c.topic }}</p> }
+        </div>
+      }
+      <div class="ml-auto flex items-center gap-1.5">
+        <button (click)="demo.openHelp()" data-tour="help" [title]="('demo.help' | t)"
+          class="h-9 px-2.5 rounded-lg text-xs font-semibold text-volt-400 hover:bg-volt-500/10 transition-colors flex items-center gap-1.5">
+          <lucide-icon name="message-square" class="w-3.5 h-3.5"></lucide-icon><span class="hidden sm:inline">{{ 'demo.help' | t }}</span>
+        </button>
+        @if (rt.state() !== 'connected') {
+          <span class="text-[11px] font-medium text-away flex items-center gap-1.5">
+            <lucide-icon name="loader" class="w-3 h-3 animate-spin"></lucide-icon>
+            {{ rt.state() === 'reconnecting' ? ('chat.reconnecting' | t) : ('chat.connecting' | t) }}
+          </span>
+        }
+        <button (click)="i18n.toggle()" title="Language" class="h-9 px-2.5 rounded-lg text-xs font-semibold hover:bg-slate-100 dark:hover:bg-coal-800 transition-colors flex items-center gap-1.5">
+          <lucide-icon name="languages" class="w-3.5 h-3.5"></lucide-icon>{{ i18n.lang() === 'en' ? 'EN' : 'ES' }}
+        </button>
+        <button (click)="theme.toggle()" title="Theme" class="h-9 w-9 rounded-lg grid place-items-center hover:bg-slate-100 dark:hover:bg-coal-800 transition-colors">
+          @if (theme.theme() === 'dark') { <lucide-icon name="sun" class="w-4 h-4"></lucide-icon> }
+          @else { <lucide-icon name="moon" class="w-4 h-4"></lucide-icon> }
+        </button>
+      </div>
+    </header>
+
+    <!-- Messages -->
+    <div #scroller data-tour="messages" (scroll)="onScroll()" class="flex-1 overflow-y-auto px-4 py-4">
+      @if (loadingMessages()) {
+        <div class="grid place-items-center py-20"><lucide-icon name="loader" class="w-6 h-6 animate-spin text-volt-500"></lucide-icon></div>
+      } @else if (!current()) {
+        <div class="h-full grid place-items-center text-sm text-slate-400 dark:text-mist-400">{{ 'chat.pickChannel' | t }}</div>
+      } @else if (messages().length === 0) {
+        <div class="h-full grid place-items-center text-sm text-slate-400 dark:text-mist-400">{{ 'chat.noMessages' | t }}</div>
+      } @else {
+        @if (loadingMore()) {
+          <div class="grid place-items-center py-3"><lucide-icon name="loader" class="w-4 h-4 animate-spin text-mist-400"></lucide-icon></div>
+        }
+        @for (m of grouped(); track m.id) {
+          <div class="msg-row msg-in group relative flex gap-3 px-2 -mx-2 rounded-lg hover:bg-slate-100 dark:hover:bg-coal-800/50 transition-colors"
+               [class.mt-3]="m.showHeader" [class.py-0.5]="!m.showHeader">
+            <div class="w-9 shrink-0">
+              @if (m.showHeader) {
+                <cs-avatar [name]="m.author.displayName" [color]="m.author.avatarColor" size="lg"></cs-avatar>
+              } @else {
+                <span class="hidden group-hover:block text-[10px] text-slate-400 dark:text-mist-400 num text-right pt-1 pr-0.5">{{ m.createdAt | date: 'shortTime' }}</span>
+              }
+            </div>
+            <div class="min-w-0 flex-1">
+              @if (m.showHeader) {
+                <p class="text-sm leading-tight">
+                  <strong class="font-semibold" [class.text-volt-400]="m.author.id === me()?.id">{{ m.author.displayName }}</strong>
+                  <span class="text-[11px] text-slate-400 dark:text-mist-400 num ml-1.5">{{ m.createdAt | date: 'shortTime' }}</span>
+                </p>
+              }
+              <p class="text-sm text-slate-700 dark:text-mist-100 leading-relaxed whitespace-pre-wrap break-words">{{ m.body }}</p>
+              @if (m.reactions.length > 0) {
+                <div class="flex flex-wrap gap-1.5 mt-1.5">
+                  @for (r of m.reactions; track r.emoji) {
+                    <button (click)="react(m.id, r.emoji)"
+                      class="rounded-full border px-2 py-0.5 text-xs num transition-colors"
+                      [class]="r.mine ? 'bg-volt-500/15 border-volt-500 text-volt-400' : 'bg-slate-100 dark:bg-coal-700 border-slate-200 dark:border-coal-500 text-slate-500 dark:text-mist-300 hover:border-volt-500'">
+                      {{ r.emoji }} {{ r.count }}
+                    </button>
+                  }
+                </div>
+              }
+            </div>
+
+            <!-- hover actions -->
+            <div class="absolute -top-3 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+              <div class="flex bg-white dark:bg-coal-800 border border-slate-200 dark:border-coal-500 rounded-lg shadow-lg">
+                <button (click)="togglePicker(m.id)" class="w-8 h-8 grid place-items-center text-slate-500 dark:text-mist-300 hover:text-slate-900 dark:hover:text-white transition-colors" aria-label="React">
+                  <lucide-icon name="smile-plus" class="w-3.5 h-3.5"></lucide-icon>
+                </button>
+              </div>
+              @if (pickerFor() === m.id) {
+                <div class="absolute right-0 mt-1 flex gap-0.5 bg-white dark:bg-coal-800 border border-slate-200 dark:border-coal-500 rounded-lg shadow-xl p-1 z-10">
+                  @for (e of reactionEmojis; track e) {
+                    <button (click)="react(m.id, e)" class="w-7 h-7 grid place-items-center rounded hover:bg-slate-100 dark:hover:bg-coal-700 text-base transition-colors">{{ e }}</button>
+                  }
+                </div>
+              }
+            </div>
+          </div>
+        }
+      }
+    </div>
+
+    <!-- Typing + composer -->
+    @if (current(); as c) {
+      <div class="px-4 pb-4 pt-1" data-tour="composer">
+        <div class="h-5 flex items-center gap-1.5 text-[11px] text-slate-400 dark:text-mist-400">
+          @if (typingNames().length > 0) {
+            <span class="flex gap-0.5">
+              <span class="typing-dot w-1 h-1 rounded-full bg-mist-300 inline-block"></span>
+              <span class="typing-dot w-1 h-1 rounded-full bg-mist-300 inline-block" style="animation-delay:.2s"></span>
+              <span class="typing-dot w-1 h-1 rounded-full bg-mist-300 inline-block" style="animation-delay:.4s"></span>
+            </span>
+            <span><strong class="text-slate-500 dark:text-mist-300">{{ typingNames().join(', ') }}</strong>
+              {{ typingNames().length > 1 ? ('chat.typingMany' | t) : ('chat.typing' | t) }}</span>
+          }
+        </div>
+        <div class="rounded-xl border border-slate-200 dark:border-coal-500 bg-white dark:bg-coal-800 focus-within:border-volt-500 transition-colors">
+          <textarea
+            rows="1" [(ngModel)]="draft" (keydown)="onComposerKey($event)"
+            class="w-full bg-transparent px-4 py-3 text-sm outline-none resize-none placeholder:text-slate-400 dark:placeholder:text-mist-400"
+            [placeholder]="('chat.messagePlaceholder' | t) + ' ' + (c.isDirect ? '@' : '#') + c.title"></textarea>
+          <div class="flex items-center gap-1 px-2 pb-2 text-slate-400 dark:text-mist-400">
+            <span class="text-[11px] ml-1">{{ i18n.lang() === 'es' ? 'Enter para enviar' : 'Enter to send' }}</span>
+            <button (click)="send()" [disabled]="!draft().trim()"
+              class="ml-auto w-8 h-7 rounded-lg bg-volt-500 grid place-items-center text-white hover:bg-volt-400 disabled:opacity-40 transition-colors">
+              <lucide-icon name="send-horizontal" class="w-3.5 h-3.5"></lucide-icon>
+            </button>
+          </div>
+        </div>
+      </div>
+    }
+  </section>
+
+  <!-- ░░ Column 3 — members ░░ -->
+  <aside class="w-60 shrink-0 hidden xl:flex flex-col bg-white dark:bg-coal-950 border-l border-slate-200 dark:border-coal-700">
+    <div class="h-14 px-4 flex items-center border-b border-slate-200 dark:border-coal-700">
+      <lucide-icon name="users" class="w-4 h-4 mr-2 text-slate-400 dark:text-mist-400"></lucide-icon>
+      <span class="font-semibold text-sm">{{ 'chat.members' | t }}</span>
+      <span class="ml-auto text-xs num text-slate-400 dark:text-mist-400">{{ members().length }}</span>
+    </div>
+    <div class="flex-1 overflow-y-auto p-2">
+      @if (onlineMembers().length > 0) {
+        <p class="px-3 pt-3 pb-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-mist-400">{{ 'chat.online' | t }} — {{ onlineMembers().length }}</p>
+        @for (m of onlineMembers(); track m.user.id) {
+          <ng-container [ngTemplateOutlet]="memberRow" [ngTemplateOutletContext]="{ m }"></ng-container>
+        }
+      }
+      @if (offlineMembers().length > 0) {
+        <p class="px-3 pt-3 pb-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-mist-400">{{ 'chat.offline' | t }} — {{ offlineMembers().length }}</p>
+        @for (m of offlineMembers(); track m.user.id) {
+          <ng-container [ngTemplateOutlet]="memberRow" [ngTemplateOutletContext]="{ m }"></ng-container>
+        }
+      }
+    </div>
+  </aside>
+</div>
+
+<ng-template #memberRow let-m="m">
+  <div class="w-full flex items-center gap-2.5 rounded-lg px-3 py-1.5 hover:bg-slate-100 dark:hover:bg-coal-800 transition-colors"
+    [class.opacity-60]="!online()[m.user.id]">
+    <cs-avatar [name]="m.user.displayName" [color]="m.user.avatarColor" size="sm" [presence]="presenceOf(m.user.id)"></cs-avatar>
+    <span class="min-w-0">
+      <span class="block text-sm font-medium truncate">{{ m.user.displayName }}</span>
+      @if (m.user.title) { <span class="block text-[11px] text-slate-400 dark:text-mist-400 truncate">{{ m.user.title }}</span> }
+    </span>
+  </div>
+</ng-template>
+
+<!-- Guided demo layer -->
+<cs-help-panel />
+<cs-tour />
+
+<ng-template #userMenu>
+  <div cdkMenu class="min-w-[200px] rounded-xl border border-slate-200 dark:border-coal-700 bg-white dark:bg-coal-800 shadow-lg p-1.5">
+    <div class="px-2.5 py-2">
+      <p class="text-sm font-semibold truncate">{{ me()?.displayName }}</p>
+      <p class="text-xs text-slate-400 dark:text-mist-400 truncate">{{ me()?.email }}</p>
+    </div>
+    <div class="h-px bg-slate-200 dark:bg-coal-700 my-1"></div>
+    <button cdkMenuItem (click)="goAbout()"
+      class="w-full flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm hover:bg-slate-100 dark:hover:bg-coal-800 transition-colors outline-none">
+      <lucide-icon name="message-circle" class="w-4 h-4"></lucide-icon>{{ i18n.lang() === 'es' ? 'Sobre el proyecto' : 'About this project' }}
+    </button>
+    <button cdkMenuItem (click)="signOut()"
+      class="w-full flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm text-red-500 hover:bg-red-500/10 transition-colors outline-none">
+      <lucide-icon name="log-out" class="w-4 h-4"></lucide-icon>{{ 'auth.signOut' | t }}
+    </button>
+  </div>
+</ng-template>

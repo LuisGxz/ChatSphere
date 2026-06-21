@@ -1,0 +1,14 @@
+# Redis for SignalR backplane + presence (used from F3 onward).
+# SQL Server runs locally (Windows auth); only Redis is containerized.
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: chatsphere-redis
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
