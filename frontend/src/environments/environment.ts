@@ -1,6 +1,6 @@
-/** Runtime config. apiBase/hubUrl are rewritten at build time for production deploys (F7). */
+/** Production runtime config — ChatSphere API on Azure. */
 export const environment = {
-  production: false,
-  apiBase: 'http://localhost:5191',
-  hubUrl: 'http://localhost:5191/hubs/chat',
+  production: true,
+  apiBase: 'https://chatsphere-api-luisgxz.azurewebsites.net',
+  hubUrl: 'https://chatsphere-api-luisgxz.azurewebsites.net/hubs/chat',
 };
